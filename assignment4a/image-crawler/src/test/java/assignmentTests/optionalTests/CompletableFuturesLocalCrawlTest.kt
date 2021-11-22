@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * OPTIONAL test for this assignment.
  */
-@Ignore
+//@Ignore
 class CompletableFuturesLocalCrawlTest {
     @Test
     fun optionalTest() {

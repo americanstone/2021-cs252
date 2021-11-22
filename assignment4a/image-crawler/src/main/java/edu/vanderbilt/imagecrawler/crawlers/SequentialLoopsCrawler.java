@@ -27,7 +27,7 @@ import edu.vanderbilt.imagecrawler.web.TransformedImage;
  * an overview of how to write a web crawler using jsoup.
  */
 public class SequentialLoopsCrawler // Loaded via reflection
-       extends ImageCrawler {
+        extends ImageCrawler {
 
     /**
      * Recursively crawls the passed page and returns the total
@@ -151,8 +151,8 @@ public class SequentialLoopsCrawler // Loaded via reflection
         // Check a flag to determine if transforms should be run
         // remotely on a remote server using microservices or locally.
         return runRemoteTransforms()
-            ? transformImageRemotely(image)
-            : transformImageLocally(image);
+                ? transformImageRemotely(image)
+                : transformImageLocally(image);
     }
 
     /**
@@ -196,10 +196,10 @@ public class SequentialLoopsCrawler // Loaded via reflection
         // Call the RemoteDataSource method that applies all
         // transforms sequentially on the image remotely.
         List<TransformedImage> transformedImages = getRemoteDataSource()
-            .applyTransforms(this,
-                             image,
-                             getTransformNames(),
-                             false);
+                .applyTransforms(this,
+                        image,
+                        getTransformNames(),
+                        false);
 
         // The resulting number of processed images.
         int imageCount = 0;

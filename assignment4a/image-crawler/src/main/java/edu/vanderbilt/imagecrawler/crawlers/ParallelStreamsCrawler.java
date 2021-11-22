@@ -5,10 +5,12 @@ import static edu.vanderbilt.imagecrawler.utils.Crawler.Type.PAGE;
 
 import java.net.URL;
 import java.util.Objects;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
 import edu.vanderbilt.imagecrawler.utils.Crawler;
 import edu.vanderbilt.imagecrawler.utils.Image;
+import edu.vanderbilt.imagecrawler.utils.WebPageElement;
 
 /**
  * This ImageCrawler implementation uses Java parallel streams to
@@ -16,11 +18,12 @@ import edu.vanderbilt.imagecrawler.utils.Image;
  * HTML page reachable from the root Uri are downloaded from a remote
  * web server or the local file system and the results are stored in
  * files that can be displayed to the user.
- * <p>
+ *
  * This implementation is a straightforward revision of the
  * SequentialStreamsCrawler.java file, with minuscule changes to use
  * parallel streams instead of sequential streams.
  */
+@SuppressWarnings("unchecked")
 public class ParallelStreamsCrawler // Loaded via reflection
         extends ImageCrawler {
     /**
@@ -44,13 +47,22 @@ public class ParallelStreamsCrawler // Loaded via reflection
         //    containing just the pageUri.
         // 2. Use an intermediate operation to filter out pageUri if
         //    it exceeds max depth or was already visited.
-        // 3. Use an intermediate operation to recursively crawl all
-        //    images and hyperlinks on this page and return the total
-        //    number of processed images.
+        // 3. Use an intermediate operation to call the crawlPage()
+        //    method and return the total number of processed images.
         // 4. Use a terminal operation to get the total number of
         //    processed images from the one-element stream.
 
         // TODO -- you fill in here replacing this statement with your solution.
+//       if(depth == mMaxDepth) {
+//           log("Exceeded max depth of " + mMaxDepth);
+//           return 0;
+//       }
+//       if(!mUniqueUris.putIfAbsent(pageUri)){
+//           log("Already processed " + pageUri);
+//           return 0;
+//       }
+//       return crawlPage(pageUri, depth);
+
         return Stream.of(pageUri)
                 .filter(uri -> {
                     if (depth > mMaxDepth) {
@@ -63,6 +75,7 @@ public class ParallelStreamsCrawler // Loaded via reflection
                         return false;
                     }
                     return true;
+//                  return depth <= mMaxDepth && mUniqueUris.putIfAbsent(uri);
                 })
                 .mapToInt(validPageUri -> crawlPage(validPageUri, depth))
                 .findFirst()
@@ -127,12 +140,12 @@ public class ParallelStreamsCrawler // Loaded via reflection
         // TODO -- you fill in here replacing this statement with your
         // solution.
         return page.getPageElements(IMAGE, PAGE).parallelStream()
-                .mapToInt(e -> {
-                    if (e.getType() == IMAGE){
-                        return processImage(e.getURL());
+                .mapToInt(webPageElement -> {
+                    if (webPageElement.getType() == IMAGE){
+                        return processImage(webPageElement.getURL());
                     }else {
                         // if a page start over
-                        return performCrawl(e.getUrl(), depth+1);
+                        return performCrawl(webPageElement.getUrl(), depth+1);
                     }
                 })
                 .sum();
@@ -166,14 +179,29 @@ public class ParallelStreamsCrawler // Loaded via reflection
     }
 
     /**
-     * Applies the current set of crawler transforms on the
-     * passed {@code image} and returns the count of all
-     * successfully transformed images.
+     * Route the request to transform an {@link Image} to either a
+     * local or remote transformer.
      *
-     * @param image The image to transform
-     * @return The count of all non-null transformed images
+     * @param image The {@link Image} to transform
+     * @return The count of the non-null transformed images
      */
     protected int transformImage(Image image) {
+        // Check a flag to determine if transforms should be run
+        // remotely on a remote server using microservices or locally.
+        return runRemoteTransforms()
+                ? transformImageRemotely(image)
+                : transformImageLocally(image);
+    }
+
+    /**
+     * Locally applies the current set of crawler transforms on the
+     * passed {@link Image} and returns a count of all successfully
+     * transformed images.
+     *
+     * @param image The {@link Image} to transform locally
+     * @return The count of the non-null transformed images
+     */
+    protected int transformImageLocally(Image image) {
         // Create and use a Java parallel stream as follows:
         // 1. Convert the List of transforms into a parallel stream.
         // 2. Attempt to create a new cache item for each image,
@@ -188,6 +216,40 @@ public class ParallelStreamsCrawler // Loaded via reflection
         return (int)mTransforms.parallelStream()
                 .filter(transform -> createNewCacheItem(image, transform))
                 .map(validTransform -> applyTransform(validTransform, image))
+                .filter(Objects::nonNull)
+                .count();
+    }
+
+    /**
+     * Calls remote server to perform transforms on the passed {@link
+     * Image} and return a count of all successfully transformed
+     * images.
+     *
+     * @param image The {@link Image} to transform remotely
+     * @return The number of transformed images
+     */
+    protected int transformImageRemotely(Image image) {
+        // Perform all transform operations and then return the number
+        // of transformed images as follows:
+        // 1. Call getRemoteDataSource() to get a proxy to the server.
+        // 2. Call a RemoteDataSource helper method to apply all
+        //    transforms on the image remotely.
+        // 3. Convert the List of resulting transformed images
+        //    into a Stream.
+        // 4. Call createImage() to convert the received
+        //    TransformedImage to a locally cached Image.
+        // 5. Skip null images.
+        // 6. Return the count of the number of transformed images.
+
+        // TODO -- you fill in here replacing this statement with your
+        // solution.
+        return (int)getRemoteDataSource()
+                .applyTransforms(this,
+                        image,
+                        getTransformNames(),
+                        false)
+                .stream()
+                .map(transformedImage -> createImage(image, transformedImage))
                 .filter(Objects::nonNull)
                 .count();
     }

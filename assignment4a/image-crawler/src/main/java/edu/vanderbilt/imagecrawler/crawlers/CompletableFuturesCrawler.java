@@ -1,11 +1,15 @@
 package edu.vanderbilt.imagecrawler.crawlers;
 
+import static edu.vanderbilt.imagecrawler.utils.Crawler.Type.IMAGE;
 import static edu.vanderbilt.imagecrawler.utils.Crawler.Type.PAGE;
 
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -30,7 +34,7 @@ public class CompletableFuturesCrawler
      */
     // TODO -- you fill in here replacing null with your solution.
     protected static CompletableFuture<Integer> mZero =
-        null;
+        CompletableFuture.completedFuture(0);
 
     /**
      * Perform the web crawl.
@@ -48,7 +52,7 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return 0 with your
         // solution.
-        return 0;
+        return crawlPageAsync(pageUri, depth).join();
     }
 
     /**
@@ -80,7 +84,12 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return 0 with your
         // solution.
-        return null;
+
+        return Stream.of(pageUri)
+                .filter(uri -> depth <= mMaxDepth && mUniqueUris.putIfAbsent(uri))
+                .map(validPageUri -> crawlPageHelper(validPageUri, depth))
+                .findFirst()
+                .orElse(mZero);
     }
 
     /**
@@ -110,7 +119,9 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+        CompletableFuture<Crawler.Page> pageAsync = getPageAsync(pageUri);
+
+        return combineResults(getImagesOnPageAsync(pageAsync), crawlHyperLinksOnPageAsync(pageAsync, depth + 1));
     }
 
     /**
@@ -128,7 +139,7 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+        return CompletableFuture.supplyAsync(() -> mWebPageCrawler.getPage(pageUri));
     }
 
     /**
@@ -150,7 +161,9 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+        return pageFuture
+                .thenApplyAsync(this::getImagesOnPage)
+                .thenComposeAsync(this::processImages);
     }
 
     /**
@@ -174,7 +187,9 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+        return pageFuture
+                .thenComposeAsync(page ->
+                        crawlHyperLinksOnPage(page, depth));
     }
 
     /**
@@ -197,7 +212,7 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+        return imagesOnPageFuture.thenCombine(imagesOnPageLinksFuture, Integer::sum);
     }
 
     /**
@@ -221,7 +236,10 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+        return page.getPageElementsAsStrings(PAGE).stream()
+                .map(url -> crawlPageAsync(url, depth))
+                .collect(FuturesCollectorIntStream.toFuture())
+                .thenApply(IntStream::sum);
     }
 
     /**
@@ -239,14 +257,19 @@ public class CompletableFuturesCrawler
         // the List of URLs.  This method should consist of a Java
         // sequential stream that uses aggregate operations (e.g.,
         // map(), collect(), flatMap(), and count()), several
-        // completable future methods (e.g., FuturesCollectorStream
+        // completable future methods (e.g., FuturesCollectorIntStream
         // .toFuture() and thenApply()), and various other methods
         // (e.g., downloadAndStoreImageAsync() and
         // transformImageAsync()).
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+        return urls.stream()
+                .map(this::getOrDownloadImageAsync)
+                .filter(Objects::nonNull)
+                .flatMap(this::transformImageAsync)
+                .collect(FuturesCollectorIntStream.toFuture())
+                .thenApply(IntStream::sum);
     }
 
     /**
@@ -270,7 +293,20 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return null;
+       return mTransforms.stream()
+                .map(transformer ->
+                        imageFuture.thenApplyAsync(image -> transformImage(transformer, image))
+                );
+        //wrong solution
+//        CompletableFuture<Integer> integerCompletableFuture =
+//                imageFuture
+//                        .thenApplyAsync(
+//                                image -> mTransforms.stream()
+//                                .map(transformer -> imageFuture.thenApplyAsync( xx -> transformImage(transformer,xx) )
+//
+//                );
+//
+//        return Stream.of(integerCompletableFuture);
     }
 
     /**
@@ -296,6 +332,10 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return 0 with your
         // solution.
-        return 0;
+        return (int)Stream.of(transform)
+                .filter(tf -> createNewCacheItem(image, tf))
+                .map(transform1 -> applyTransform(transform1, image))
+                .filter(Objects::nonNull)
+                .count();
     }
 }
