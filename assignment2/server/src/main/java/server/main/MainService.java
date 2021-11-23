@@ -12,6 +12,7 @@ import server.common.model.TransformedImage;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -80,7 +81,11 @@ public class MainService {
         // return the list of all transformed images.
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
+        return transforms.parallelStream()
+                .map(this::buildMicroserviceUrl)
+                .filter(Objects::nonNull)
+                .map(url -> postRequest(url, imageBytes, fileName))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -116,7 +121,7 @@ public class MainService {
         // Post the request and return the transformed image.
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
+        return restTemplate.postForEntity(url, map, TransformedImage.class).getBody();
     }
 
     /**
@@ -162,6 +167,6 @@ public class MainService {
         // that transform images.
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
+        return discoveryClient.getServices().stream();
     }
 }

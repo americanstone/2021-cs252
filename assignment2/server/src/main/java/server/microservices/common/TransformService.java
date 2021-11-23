@@ -45,6 +45,9 @@ public class TransformService {
     TransformService() {
         // Initialize the contents of mTransformMap with the appropriate values.
         // TODO -- you fill in here.
+        mTransformMap.put("GrayScaleTransform",  this::grayscaleTransform);
+        mTransformMap.put("SepiaTransform", this::sepiaTransform);
+        mTransformMap.put("TintTransform", this::tintTransform);
     }
 
     /**
@@ -68,11 +71,11 @@ public class TransformService {
         // given transform and apply the transform to the buffered
         // image.
         // TODO -- you fill in here.
-
+        mTransformMap.get(transformName).apply(bufferedImage);
         // Create and return a new DTO transformed image.
         // TODO -- you fill in here, replacing return null with
         // the appropriate code.
-        return null;
+        return new TransformedImage(imageName, transformName, bufferedImage);
     }
 
     /**

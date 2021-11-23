@@ -7,7 +7,10 @@ version 'unspecified'
 repositories {
     mavenCentral()
 }
-
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
 dependencies {
     implementation "io.projectreactor:reactor-core:3.3.4.RELEASE"
 

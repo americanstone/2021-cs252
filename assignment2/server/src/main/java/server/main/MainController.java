@@ -56,6 +56,7 @@ public class MainController {
     // TODO -- you fill in below by adding the appropriate annotations
     // to create a Spring WebMVC endpoint method that calls the service.
     // to apply the transform and return the TransformedImage.
+    @PostMapping("/apply-transforms")
     public List<TransformedImage> applyTransforms
         (List<String> transforms,
          MultipartFile image) throws IOException {
@@ -64,6 +65,6 @@ public class MainController {
 
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
+        return imageService.applyTransforms(transforms, image.getName(), image.getBytes());
     }
 }

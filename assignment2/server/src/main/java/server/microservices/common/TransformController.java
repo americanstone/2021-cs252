@@ -70,6 +70,7 @@ public class TransformController {
     // TODO -- you fill in below by adding the appropriate annotations
     // to create a Spring WebMVC endpoint method that calls the service.
     // to apply the transform and return the TransformedImage.
+    @PostMapping("/apply-transform")
     public TransformedImage applyTransform(
             String transform,
             MultipartFile image) throws IOException {
