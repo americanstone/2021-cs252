@@ -3,6 +3,8 @@ package edu.vanderbilt.imagecrawler.crawlers;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import edu.vanderbilt.imagecrawler.utils.Crawler;
 import edu.vanderbilt.imagecrawler.utils.Image;
@@ -46,16 +48,16 @@ public class ReactorCrawler
 
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return 0;
         // Crawl the page using the specified uri and depth.
-
+       return crawlPageAsync(pageUri, depth)
         // Count the number of elements in Flux stream.
-
+        .count()
         // Return 0 if any exception is encountered.
-
+        .onErrorReturn(0L)
         // Block to get the result.
-
+        .block()
         // Convert the result to an int primitive.
+        .intValue();
     }
 
     /**
@@ -78,16 +80,17 @@ public class ReactorCrawler
 
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
-        // Create a Flux that emits this pageUri.
 
+        // Create a Flux that emits this pageUri.
+        return Flux.just(pageUri)
         // Filter out page if it exceeds the depth or has already
         // been visited.
-
+        .filter(__-> depth <= mMaxDepth && mUniqueUris.putIfAbsent(pageUri))
         // Map the url to a page.
-
+        .map(mWebPageCrawler::getPage)
         // Apply the flatMap() concurrency idiom to convert each
         // page to a Flux stream of images asynchronously.
+        .flatMap(page -> imagesOnPageAndPageLinksAsync(page, depth));
     }
 
     /**
@@ -109,7 +112,8 @@ public class ReactorCrawler
 
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
+        return imagesOnPageAsync(page)
+                .mergeWith(imagesOnPageLinksAsync(page, depth));
     }
 
     /**
@@ -129,13 +133,15 @@ public class ReactorCrawler
 
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
         // Convert the list of page links into a Flux stream of
         // page links.
-            
+        int next = depth+1;
+        return Flux.fromIterable(page.getPageElementsAsStrings(PAGE))
+
         // Apply the flatMap() concurrency idiom to map each page
         // to a stream of images that are downloaded and
         // transformed concurrently via the parallel scheduler.
+         .flatMap(url -> crawlPageAsync(url, next));
     }
 
     /**
@@ -153,16 +159,16 @@ public class ReactorCrawler
 
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
         // Convert the list of images in the page into an
         // Flux stream.
-
+        return Flux.fromIterable(page.getPageElementsAsUrls(IMAGE))
         // Apply a transforming operator to download the stream of
         // images in parallel.
-            
+         .flatMap(this::downloadImageAsync)
         // Again a transforming operator to convert the stream of
         // downloaded images into a stream of images that are
         // transformed in parallel.
+        .flatMap(this::transformImageAsync);
     }
 
     /**
@@ -182,13 +188,14 @@ public class ReactorCrawler
 
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
+//        return null;
         // Create a Flux that emits the URL.
-
+        return Mono.fromCallable(() -> url)
         // Run computation in the parallel scheduler.
-
+        .subscribeOn(Schedulers.parallel())
         // Map the image URL to a possibly downloaded image,
         // ignoring any null values that may occur.
+        .mapNotNull(this::getOrDownloadImage);
     }
 
     /**
@@ -223,17 +230,18 @@ public class ReactorCrawler
 
         // TODO -- you fill in here replacing this statement with
         // your solution.
-        return null;
+
         // Convert the List of transforms into an stream of
         // transforms.
-            
+        return Flux.fromIterable(mTransforms)
         // Run computations in the parallel scheduler.
-            
+         .subscribeOn(Schedulers.parallel())
         // Only transform images that haven't already been
         // transformed.
-
+        .filter(transform -> createNewCacheItem(image, transform))
         // Apply the transform on the image, ignoring any
         // null values that are returned.
+        .mapNotNull(transform -> applyTransform(transform, image));
     }
 
     /**
@@ -260,11 +268,11 @@ public class ReactorCrawler
         // Call RemoteDataSource helper to build a MultipartBody.Part
         // containing the image bytes.
         // TODO -- you fill in here replacing null with your solution.
-        MultipartBody.Part imagePart = null;
+        MultipartBody.Part imagePart = remoteDataSource.buildMultipartBodyPart(this, image);
 
         // Call super class helper method to get the list of transforms.
         // TODO -- you fill in here replacing null with your solution.
-        List<String> transformNames = null;
+        List<String> transformNames = getTransformNames();
 
         // Call the api method that builds a Flux stream of
         // transforms.  Once subscribed to, this stream will using
@@ -272,13 +280,13 @@ public class ReactorCrawler
         // remotely.
         // TODO -- you fill in here replacing this statement with your
         // solution.
-        return null;
         // Call that RemoteDataSource method that applies all
         // transforms in parallel on the image remotely.
-            
+        return api.applyReactorTransforms(transformNames,imagePart, true)
         // Convert Mono<List<TransformedImage>> to
         // Flux<TransformedImage>.
-            
+        .flatMapIterable(Function.identity())
         // Create an Image instance to return to caller.
+        .map(transformedImage -> createImage(image, transformedImage));
     }
 }
