@@ -121,7 +121,8 @@ public class CompletableFuturesCrawler
         // solution.
         CompletableFuture<Crawler.Page> pageAsync = getPageAsync(pageUri);
 
-        return combineResults(getImagesOnPageAsync(pageAsync), crawlHyperLinksOnPageAsync(pageAsync, depth + 1));
+        return combineResults(getImagesOnPageAsync(pageAsync),
+                crawlHyperLinksOnPageAsync(pageAsync, depth+1));
     }
 
     /**
@@ -163,6 +164,7 @@ public class CompletableFuturesCrawler
         // solution.
         return pageFuture
                 .thenApplyAsync(this::getImagesOnPage)
+                // same thread as the upstream task
                 .thenComposeAsync(this::processImages);
     }
 
@@ -212,7 +214,10 @@ public class CompletableFuturesCrawler
 
         // TODO -- you fill in here replacing return null with your
         // solution.
-        return imagesOnPageFuture.thenCombine(imagesOnPageLinksFuture, Integer::sum);
+        return imagesOnPageFuture.thenCombine(
+                // call on provided executor or ForkJoinPool
+                imagesOnPageLinksFuture, Integer::sum
+        );
     }
 
     /**

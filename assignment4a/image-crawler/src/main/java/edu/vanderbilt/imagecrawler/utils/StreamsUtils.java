@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * A utility class containing helpful methods for manipulating various
@@ -40,9 +41,9 @@ public class StreamsUtils {
         return allDoneFuture
             .thenApply(v -> {
                     // Create an array to store results.
-                    List<T> results = new ArrayList<>();
+//                    List<T> results = new ArrayList<>();
 
-                    futureArray
+                   return futureArray
                         // Convert futureList into a stream of
                         // completable futures.
                         .stream()
@@ -51,12 +52,13 @@ public class StreamsUtils {
                         // and yield objects of type T.  Note that
                         // join() should never block.
                         .map(CompletableFuture::join)
+                            .collect(Collectors.toList());
 
                         // Add the results of type T into the array.
-                        .forEach(results::add);
+//                        .forEach(results::add);
 
                     // Return the results array.
-                    return results;
+//                    return results;
                 });
     }
 
